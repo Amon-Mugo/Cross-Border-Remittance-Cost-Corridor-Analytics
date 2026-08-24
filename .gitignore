@@ -17,3 +17,5 @@ __pycache__/
 # Raw data (lives in S3, not git)
 *.xlsx
 *.xlsx.bak
+data/
+.~lock.*
