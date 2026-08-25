@@ -1,5 +1,5 @@
-#to check any null values in the data
-#and replace is with null
+# to check any null values in the data
+# and replace is with null
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 

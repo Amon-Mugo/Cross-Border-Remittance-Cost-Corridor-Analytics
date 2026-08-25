@@ -1,5 +1,5 @@
-#enable dates to have a proper timestamp format
-#and also decompose 2016_2Q is split into 2016 and 2Q
+# enable dates to have a proper timestamp format
+# and also decompose 2016_2Q is split into 2016 and 2Q
 from pyspark.sql import DataFrame
 import pyspark.sql.functions as F
 
@@ -10,15 +10,12 @@ DATE_FORMAT_LONG = "yyyy-MM-dd HH:mm:ss"
 def parse_date_column(df: DataFrame) -> DataFrame:
     if "date" not in df.columns:
         raise ValueError("Expected 'date' column not found in DataFrame")
-    return (
-        df.withColumn("date_raw", F.col("date"))
-        .withColumn(
-            "date",
-            F.coalesce(
-                F.try_to_date(F.col("date_raw"), DATE_FORMAT_SHORT),
-                F.try_to_date(F.col("date_raw"), DATE_FORMAT_LONG),
-            ),
-        )
+    return df.withColumn("date_raw", F.col("date")).withColumn(
+        "date",
+        F.coalesce(
+            F.try_to_date(F.col("date_raw"), DATE_FORMAT_SHORT),
+            F.try_to_date(F.col("date_raw"), DATE_FORMAT_LONG),
+        ),
     )
 
 

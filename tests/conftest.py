@@ -18,7 +18,9 @@ def spark():
         .config("spark.ui.enabled", "false")  # no need for Spark UI in tests
         .getOrCreate()
     )
-    session.sparkContext.setLogLevel("ERROR")  # quiet down noisy Spark logs in test output
+    session.sparkContext.setLogLevel(
+        "ERROR"
+    )  # quiet down noisy Spark logs in test output
 
     yield session
 
