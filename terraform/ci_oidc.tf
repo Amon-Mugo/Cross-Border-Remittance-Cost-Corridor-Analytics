@@ -96,6 +96,7 @@ data "aws_iam_policy_document" "ci_plan_permissions" {
     actions = [
       "s3:GetObject",
       "s3:ListBucket",
+      "s3:GetBucketPolicy",
     ]
     resources = [
       "arn:aws:s3:::${var.terraform_state_bucket}",
@@ -110,20 +111,67 @@ data "aws_iam_policy_document" "ci_plan_permissions" {
       "dynamodb:GetItem",
       "dynamodb:PutItem",
       "dynamodb:DeleteItem",
+      "dynamodb:DescribeTable",
     ]
     resources = [
       data.aws_dynamodb_table.terraform_locks.arn,
     ]
   }
-}
 
-resource "aws_iam_role_policy" "ci_plan_permissions" {
-  name   = "ci-plan-readonly-permissions"
-  role   = aws_iam_role.ci_plan_role.id
-  policy = data.aws_iam_policy_document.ci_plan_permissions.json
-}
+  statement {
+    sid    = "AllowDataBucketRead"
+    effect = "Allow"
+    actions = [
+      "s3:GetBucketOwnershipControls",
+      "s3:GetBucketPublicAccessBlock",
+      "s3:GetBucketVersioning",
+      "s3:GetEncryptionConfiguration",
+      "s3:GetBucketAcl",
+      "s3:GetBucketLocation",
+    ]
+    resources = [
+      "arn:aws:s3:::remittance-corridor-raw-data-bucket-011294328070",
+      "arn:aws:s3:::remittance-corridor-curated-data-bucket-011294328070",
+    ]
+  }
 
-output "ci_plan_role_arn" {
-  description = "ARN to set as the AWS_CI_PLAN_ROLE_ARN GitHub Actions secret"
-  value       = aws_iam_role.ci_plan_role.arn
+  statement {
+    sid    = "AllowOidcProviderRead"
+    effect = "Allow"
+    actions = [
+      "iam:GetOpenIDConnectProvider",
+    ]
+    resources = [
+      aws_iam_openid_connect_provider.github_actions.arn,
+    ]
+  }
+
+  statement {
+    sid    = "AllowIamRead"
+    effect = "Allow"
+    actions = [
+      "iam:GetRole",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListRolePolicies",
+      "iam:GetRolePolicy",
+    ]
+    resources = [
+      "arn:aws:iam::011294328070:role/remittance-corridor-*",
+      "arn:aws:iam::011294328070:policy/remittance-corridor-*",
+    ]
+  }
+
+  statement {
+    sid    = "AllowEcrRead"
+    effect = "Allow"
+    actions = [
+      "ecr:DescribeRepositories",
+      "ecr:ListTagsForResource",
+    ]
+    resources = [
+      "arn:aws:ecr:us-east-1:011294328070:repository/remittance-corridor-ecr-repository-011294328070",
+    ]
+  }
 }
