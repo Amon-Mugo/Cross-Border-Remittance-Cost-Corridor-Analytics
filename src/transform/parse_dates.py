@@ -13,11 +13,10 @@ def parse_date_column(df: DataFrame) -> DataFrame:
     return df.withColumn("date_raw", F.col("date")).withColumn(
         "date",
         F.coalesce(
-            F.expr(f"try_to_date(date_raw, '{DATE_FORMAT_SHORT}')"),
-            F.expr(f"try_to_date(date_raw, '{DATE_FORMAT_LONG}')"),
+            F.to_date(F.col("date_raw"), DATE_FORMAT_SHORT),
+            F.to_date(F.col("date_raw"), DATE_FORMAT_LONG),
         ),
     )
-
 
 def parse_period_column(df: DataFrame) -> DataFrame:
     if "period" not in df.columns:
