@@ -1,0 +1,90 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+env:
+  PYTHON_VERSION: "3.12"
+  AWS_REGION: "us-east-1"
+
+jobs:
+  lint-and-test:
+    name: Lint and Test (Python)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Lint Python (flake8)
+        run: flake8 src/ tests/ --max-line-length=120
+
+      - name: Check formatting (black)
+        run: black --check src/ tests/
+
+      - name: Run tests (pytest)
+        run: pytest tests/ -v
+
+      # dbt test coverage lands with Milestone 6 (staging/intermediate/marts)
+
+  docker-build-lint:
+    name: Docker Build and Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint Dockerfile (hadolint)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: Dockerfile
+
+      - name: Build image (no push)
+        run: docker build -t remittance-corridor-ci-build:latest .
+
+  terraform-plan:
+    name: Terraform Plan (read only)
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_CI_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform init
+        run: terraform -chdir=terraform init
+
+      - name: Terraform fmt check
+        run: terraform -chdir=terraform fmt -check -recursive
+
+      - name: Terraform validate
+        run: terraform -chdir=terraform validate
+
+      - name: Terraform plan
+        run: terraform -chdir=terraform plan -no-color

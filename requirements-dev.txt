@@ -1,0 +1,6 @@
+-r requirements.txt
+pytest
+pyspark==3.5.9
+pyarrow
+flake8
+black
