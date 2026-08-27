@@ -1,6 +1,6 @@
 
 
-FROM public.ecr.aws/emr-serverless/spark/emr-7.1.0:latest
+FROM public.ecr.aws/emr-serverless/spark/emr-7.1.0@sha256:4a8e05f528fa08c00a20a22ced7ccb279d1e166c39a18b46a3abecefa7df7daa
 
 USER root
 
