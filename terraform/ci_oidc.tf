@@ -67,8 +67,9 @@ data "aws_iam_policy_document" "ci_plan_trust" {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
       values = [
-        "repo:${var.github_repo}:ref:refs/heads/main",
-        "repo:${var.github_repo}:pull_request"
+        "repo:Amon-Mugo@205969589/Cross-Border-Remittance-Cost-Corridor-Analytics@1343621611:ref:refs/heads/main",
+        "repo:Amon-Mugo@205969589/Cross-Border-Remittance-Cost-Corridor-Analytics@1343621611:pull_request"
+
       ]
     }
   }
