@@ -127,3 +127,8 @@ output "ci_plan_role_arn" {
   description = "ARN to set as the AWS_CI_PLAN_ROLE_ARN GitHub Actions secret"
   value       = aws_iam_role.ci_plan_role.arn
 }
+
+resource "aws_iam_role_policy_attachment" "ci_plan_readonly" {
+  role       = aws_iam_role.ci_plan_role.id
+  policy_arn = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+}
