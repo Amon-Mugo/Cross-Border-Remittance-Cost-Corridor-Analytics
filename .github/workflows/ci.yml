@@ -78,7 +78,10 @@ jobs:
           terraform_wrapper: false
 
       - name: Terraform init
-        run: terraform -chdir=terraform init
+        run: |
+          terraform -chdir=terraform init \
+            -backend-config="bucket=remittance-corridor-tfstate-011294328070" \
+            -backend-config="dynamodb_table=remittance-corridor-terraform-locks-011294328070"
 
       - name: Terraform fmt check
         run: terraform -chdir=terraform fmt -check -recursive
