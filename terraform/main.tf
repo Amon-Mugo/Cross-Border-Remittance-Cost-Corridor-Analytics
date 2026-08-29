@@ -13,10 +13,8 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "remittance-corridor-tfstate-011294328070"
     key            = "terraform.tfstate"
     region         = "us-east-1"
-    dynamodb_table = "remittance-corridor-terraform-locks-011294328070"
     encrypt        = true
   }
 }

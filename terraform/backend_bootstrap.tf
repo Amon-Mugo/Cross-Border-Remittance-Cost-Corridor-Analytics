@@ -1,7 +1,7 @@
 # use s3+dynamodb as backend
 
 resource "aws_s3_bucket" "tfstate" {
-  bucket = "remittance-corridor-tfstate-011294328070"
+  bucket = var.tfstate_bucket_name
   lifecycle {
     prevent_destroy = true
   }
@@ -39,7 +39,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "tfstate" {
 
 # DynamoDB Table for State Locking
 resource "aws_dynamodb_table" "terraform_locks" {
-  name         = "remittance-corridor-terraform-locks-011294328070"
+  name         = var.tfstate_lock_table_name
   billing_mode = "PAY_PER_REQUEST"
   hash_key     = "LockID"
   lifecycle {

@@ -1,0 +1,2 @@
+bucket         = "remittance-corridor-tfstate-<AWS_ACCOUNT_ID>"
+dynamodb_table = "remittance-corridor-terraform-locks-<AWS_ACCOUNT_ID>"

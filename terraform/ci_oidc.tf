@@ -11,13 +11,11 @@ variable "github_repo" {
 variable "terraform_state_bucket" {
   description = "S3 bucket holding the terraform remote state"
   type        = string
-  default     = "remittance-corridor-tfstate-011294328070"
 }
 
 variable "terraform_locks_table_name" {
   description = "Existing DynamoDB table used for terraform state locking"
   type        = string
-  default     = "remittance-corridor-terraform-locks-011294328070"
 }
 
 # Reference to the DynamoDB locks table that already exists created outside

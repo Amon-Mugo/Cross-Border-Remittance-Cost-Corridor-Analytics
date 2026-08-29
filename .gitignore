@@ -19,3 +19,6 @@ __pycache__/
 *.xlsx.bak
 data/
 .~lock.*
+rsa_key.p8
+rsa_key.pub
+terraform.tfvars
