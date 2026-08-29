@@ -10,23 +10,23 @@ variable "aws_profile" {
 }
 
 variable "project_name" {
-  type    = string
+  type = string
 }
 
 variable "ingestion_role_name" {
-  type    = string
+  type = string
 }
 
 variable "emr_execution_role_name" {
-  type    = string
+  type = string
 }
 
 variable "ecr_repository_name" {
-  type    = string
+  type = string
 }
 
 variable "emr_application_name" {
-  type    = string
+  type = string
 }
 
 variable "raw_bucket_name" {
@@ -57,7 +57,7 @@ variable "tfstate_lock_table_name" {
 
 variable "snowflake_iam_user_arn" {
   description = "Snowflake's generated IAM user ARN (from DESC INTEGRATION)"
-  type       = string
+  type        = string
 }
 
 variable "snowflake_external_id" {

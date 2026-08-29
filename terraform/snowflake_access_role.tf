@@ -37,7 +37,7 @@ resource "aws_iam_role_policy" "remittance_corridor_snowflake_s3_read" {
         Resource = "arn:aws:s3:::${var.curated_bucket_name}/*"
       },
       {
-        Effect = "Allow"
+        Effect   = "Allow"
         Action   = ["s3:ListBucket"]
         Resource = "arn:aws:s3:::${var.curated_bucket_name}"
       }
