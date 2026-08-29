@@ -88,6 +88,20 @@ jobs:
 
       - name: Terraform validate
         run: terraform -chdir=terraform validate
-
       - name: Terraform plan
         run: terraform -chdir=terraform plan -no-color
+        env:
+          TF_VAR_aws_account_id: ${{ secrets.TF_VAR_AWS_ACCOUNT_ID }}
+          TF_VAR_project_name: ${{ secrets.TF_VAR_PROJECT_NAME }}
+          TF_VAR_ingestion_role_name: ${{ secrets.TF_VAR_INGESTION_ROLE_NAME }}
+          TF_VAR_emr_execution_role_name: ${{ secrets.TF_VAR_EMR_EXECUTION_ROLE_NAME }}
+          TF_VAR_ecr_repository_name: ${{ secrets.TF_VAR_ECR_REPOSITORY_NAME }}
+          TF_VAR_emr_application_name: ${{ secrets.TF_VAR_EMR_APPLICATION_NAME }}
+          TF_VAR_raw_bucket_name: ${{ secrets.TF_VAR_RAW_BUCKET_NAME }}
+          TF_VAR_curated_bucket_name: ${{ secrets.TF_VAR_CURATED_BUCKET_NAME }}
+          TF_VAR_tfstate_bucket_name: ${{ secrets.TF_VAR_TFSTATE_BUCKET_NAME }}
+          TF_VAR_tfstate_lock_table_name: ${{ secrets.TF_VAR_TFSTATE_LOCK_TABLE_NAME }}
+          TF_VAR_terraform_state_bucket: ${{ secrets.TF_VAR_TERRAFORM_STATE_BUCKET }}
+          TF_VAR_terraform_locks_table_name: ${{ secrets.TF_VAR_TERRAFORM_LOCKS_TABLE_NAME }}
+          TF_VAR_snowflake_iam_user_arn: ${{ secrets.TF_VAR_SNOWFLAKE_IAM_USER_ARN }}
+          TF_VAR_snowflake_external_id: ${{ secrets.TF_VAR_SNOWFLAKE_EXTERNAL_ID }}
