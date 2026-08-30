@@ -96,7 +96,8 @@ resource "aws_iam_policy" "remittance_corridor_emr_s3_access" {
       {
         Effect = "Allow"
         Action = [
-          "s3:GetBucketLocation"
+          "s3:GetBucketLocation",
+          "s3:ListBucket"
         ]
         Resource = [
           aws_s3_bucket.remittance_cost_corridor_analytics_curated.arn

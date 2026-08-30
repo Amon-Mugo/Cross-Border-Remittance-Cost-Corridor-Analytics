@@ -22,3 +22,4 @@ data/
 rsa_key.p8
 rsa_key.pub
 terraform.tfvars
+src.zip
