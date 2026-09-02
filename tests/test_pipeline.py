@@ -201,21 +201,37 @@ class TestRunPipeline:
 
 
 class TestWriteOutputs:
-    def test_writes_clean_df_to_clean_prefix(self, mock_df, mock_report_df):
+    def test_writes_clean_df_per_quarter_to_quarter_clean_prefix(
+        self, mock_df, mock_report_df
+    ):
+        """clean_df must be split by distinct 'period' and each slice
+        written to its own <output_path>/<period>/clean prefix, matching
+        the Snowflake LOAD_REMITTANCE_RAW stage path convention."""
+        mock_df.select.return_value.distinct.return_value.collect.return_value = [
+            {"period": "2016_2Q"},
+            {"period": "2016_3Q"},
+        ]
+
         write_outputs(
             mock_df,
             {"grain_duplicates": mock_report_df},
             "s3://remittance-corridor-curated-data-bucket-011294328070",
         )
 
-        mock_df.write.mode.assert_any_call("overwrite")
-        mock_df.write.mode.return_value.parquet.assert_any_call(
-            "s3://remittance-corridor-curated-data-bucket-011294328070/clean"
+        mock_df.select.assert_any_call("period")
+        assert mock_df.filter.call_count == 2
+        mock_df.filter.return_value.write.mode.assert_any_call("overwrite")
+        mock_df.filter.return_value.write.mode.return_value.parquet.assert_any_call(
+            "s3://remittance-corridor-curated-data-bucket-011294328070/2016_2Q/clean"
+        )
+        mock_df.filter.return_value.write.mode.return_value.parquet.assert_any_call(
+            "s3://remittance-corridor-curated-data-bucket-011294328070/2016_3Q/clean"
         )
 
     def test_writes_each_report_to_its_own_quality_reports_subdir(
         self, mock_df, mock_report_df
     ):
+        mock_df.select.return_value.distinct.return_value.collect.return_value = []
         reports = {
             "grain_duplicates": MagicMock(),
             "fx_margin": MagicMock(),
@@ -231,8 +247,12 @@ class TestWriteOutputs:
         )
 
     def test_strips_trailing_slash_from_output_path(self, mock_df):
+        mock_df.select.return_value.distinct.return_value.collect.return_value = [
+            {"period": "2016_2Q"}
+        ]
+
         write_outputs(mock_df, {}, "s3://curated-bucket/")
 
-        mock_df.write.mode.return_value.parquet.assert_any_call(
-            "s3://curated-bucket/clean"
+        mock_df.filter.return_value.write.mode.return_value.parquet.assert_any_call(
+            "s3://curated-bucket/2016_2Q/clean"
         )

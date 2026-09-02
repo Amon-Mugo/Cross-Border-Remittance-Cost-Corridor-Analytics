@@ -34,7 +34,7 @@ def test_duplicate_check_flags_both_rows_of_a_duplicate_pair(spark):
     df = spark.createDataFrame(
         [
             ("US-MX", "FirmA", "2016_2Q", "Bank transfer", 200.0),
-            ("US-MX", "FirmA", "2016_2Q", "Mobile wallet", 300.0),
+            ("US-MX", "FirmA", "2016_2Q", "Bank transfer", 200.0),
             ("US-KE", "FirmA", "2016_2Q", "Mobile wallet", 100.0),
         ],
         SCHEMA,
@@ -42,8 +42,8 @@ def test_duplicate_check_flags_both_rows_of_a_duplicate_pair(spark):
 
     clean_df, flagged_report = check_duplicates(df)
 
-    # both rows sharing the corridor-firm-period key are flagged, even
-    # though they differ on instrument and send_amount
+    # both rows sharing the full grain key (corridor, firm, period,
+    # instrument, send_amount) are flagged as true duplicates
     assert clean_df.count() == 1
     assert flagged_report.count() == 2
     for row in flagged_report.collect():
@@ -54,8 +54,8 @@ def test_duplicate_check_triplicate_reports_all_three(spark):
     df = spark.createDataFrame(
         [
             ("US-MX", "FirmA", "2016_2Q", "Bank transfer", 200.0),
-            ("US-MX", "FirmA", "2016_2Q", "Mobile wallet", 300.0),
-            ("US-MX", "FirmA", "2016_2Q", "Cash pickup", 150.0),
+            ("US-MX", "FirmA", "2016_2Q", "Bank transfer", 200.0),
+            ("US-MX", "FirmA", "2016_2Q", "Bank transfer", 200.0),
         ],
         SCHEMA,
     )

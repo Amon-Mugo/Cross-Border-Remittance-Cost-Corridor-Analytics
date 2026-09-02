@@ -3,7 +3,9 @@
 from pyspark.sql import DataFrame, functions as F
 from pyspark.sql.window import Window
 
-DUPLICATE_KEY_COLUMNS = ["corridor", "firm", "period"]
+from src.transform.validate_grain import GRAIN_COLUMNS
+
+DUPLICATE_KEY_COLUMNS = GRAIN_COLUMNS
 
 
 def check_duplicates(

@@ -14,8 +14,8 @@ from src.transform.unpivot_cc import unpivot_cc
 from src.transform.validate_grain import validate_grain
 
 logger = logging.getLogger(__name__)
-RAW_BUCKET = "remittance-corridor-raw-data-bucket-011294328070"
-CURATED_BUCKET = "remittance-corridor-curated-data-bucket-011294328070"
+RAW_BUCKET = "remittance-corridor-raw-data-bucket-<ACCOUNT_ID>"
+CURATED_BUCKET = "remittance-corridor-curated-data-bucket-<ACCOUNT_ID>"
 DEFAULT_RAW_PATH = f"s3://{RAW_BUCKET}/raw/full_history/rpw_q2_2016_2025.parquet"
 DEFAULT_OUTPUT_PATH = f"s3://{CURATED_BUCKET}"
 
@@ -65,16 +65,23 @@ def run_pipeline(
 def write_outputs(
     clean_df: DataFrame, reports: dict[str, DataFrame], output_path: str
 ) -> None:
-    # clean_df is the clean data
+    # clean_df is the clean data, written per-quarter so Snowflake's
+    # LOAD_REMITTANCE_RAW can target one quarter's subfolder at a time
     # reports is the quality reports
     # output_path uses emr.tf and iam.tf policies to write to s3
 
-    clean_out = f"{output_path.rstrip('/')}/clean"  # this strips the trailing slash
-    logger.info("writing clean output to %s", clean_out)
-    clean_df.write.mode("overwrite").parquet(clean_out)
+    base = output_path.rstrip("/")
+    periods = [row["period"] for row in clean_df.select("period").distinct().collect()]
+
+    for period in periods:
+        period_out = f"{base}/{period}/clean"
+        logger.info("writing clean output for %s to %s", period, period_out)
+        clean_df.filter(clean_df["period"] == period).write.mode("overwrite").parquet(
+            period_out
+        )
 
     for name, report_df in reports.items():
-        report_out = f"{output_path.rstrip('/')}/quality_reports/{name}"
+        report_out = f"{base}/quality_reports/{name}"
         logger.info("writing %s report to %s", name, report_out)
         report_df.write.mode("overwrite").parquet(report_out)
 
