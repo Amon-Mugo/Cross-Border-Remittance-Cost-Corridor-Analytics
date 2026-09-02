@@ -14,8 +14,8 @@ from src.transform.unpivot_cc import unpivot_cc
 from src.transform.validate_grain import validate_grain
 
 logger = logging.getLogger(__name__)
-RAW_BUCKET = "remittance-corridor-raw-data-bucket-<ACCOUNT_ID>"
-CURATED_BUCKET = "remittance-corridor-curated-data-bucket-<ACCOUNT_ID>"
+RAW_BUCKET = "remittance-corridor-raw-data-bucket-<redacted>"
+CURATED_BUCKET = "remittance-corridor-curated-data-bucket-<redacted>"
 DEFAULT_RAW_PATH = f"s3://{RAW_BUCKET}/raw/full_history/rpw_q2_2016_2025.parquet"
 DEFAULT_OUTPUT_PATH = f"s3://{CURATED_BUCKET}"
 
@@ -32,20 +32,19 @@ def run_pipeline(
     df = parse_period_column(df)
     df = unpivot_cc(df)
 
-    # check for quality issues
-    df, grain_duplicates_report = validate_grain(
-        df
-    )  # gain_duplicates will hold duplicate records
+    # validate_grain is the only hard filter: it removes true
+    # full-grain duplicate rows, which are structurally invalid data.
+    df, grain_duplicates_report = validate_grain(df)
 
-    df, fx_margin_report = check_fx_margin(
-        df
-    )  # fx_margin report will hold negative fx margins
-
-    df, transparency_report = check_transparency(df)  # transparency report will no
-
-    df, duplicate_check_report = check_duplicates(
-        df
-    )  # duplicate check report will hold duplicate records
+    # fx_margin, transparency, and duplicate_check are quality flags,
+    # not filters. Each runs against the same grain-deduped df and
+    # only its flagged-rows report is kept -- clean_df is not narrowed
+    # further, so a bad fx margin or an untransparent pricing
+    # disclosure stays visible in the curated output and its own
+    # quality report, instead of being silently dropped.
+    _, fx_margin_report = check_fx_margin(df)
+    _, transparency_report = check_transparency(df)
+    _, duplicate_check_report = check_duplicates(df)
 
     reports = {
         "grain_duplicates": grain_duplicates_report,

@@ -38,7 +38,7 @@ class TestRunPipeline:
     @patch("src.pipeline.parse_date_column")
     @patch("src.pipeline.clean_geography_nulls")
     @patch("src.pipeline.load_raw_parquet")
-    def test_calls_stages_in_order_with_chained_output(
+    def test_calls_stages_in_order_with_correct_data_flow(
         self,
         mock_load_raw_parquet,
         mock_clean_geography_nulls,
@@ -52,11 +52,15 @@ class TestRunPipeline:
         mock_df,
         mock_report_df,
     ):
-        """Each stage's output must be passed as the next stage's input,
-        in the exact declared order: load -> clean -> parse_date ->
-        parse_period -> unpivot -> validate_grain -> fx_margin ->
-        transparency -> duplicates."""
-        stage_outputs = [MagicMock(name=f"df_stage_{i}") for i in range(9)]
+        """Transform stages chain load -> clean -> parse_date ->
+        parse_period -> unpivot -> validate_grain, in order, each
+        receiving the previous stage's output. validate_grain's clean
+        output is the only hard filter: fx_margin, transparency, and
+        duplicate_check are flag-only checks that all receive that
+        same grain-deduped df (not each other's output), and their
+        clean-side return value is discarded -- final clean_df is
+        validate_grain's output, unmodified by the three checks."""
+        stage_outputs = [MagicMock(name=f"df_stage_{i}") for i in range(6)]
 
         mock_load_raw_parquet.return_value = stage_outputs[0]
         mock_clean_geography_nulls.return_value = stage_outputs[1]
@@ -64,32 +68,32 @@ class TestRunPipeline:
         mock_parse_period_column.return_value = stage_outputs[3]
         mock_unpivot_cc.return_value = stage_outputs[4]
         mock_validate_grain.return_value = (stage_outputs[5], mock_report_df)
-        mock_check_fx_margin.return_value = (stage_outputs[6], mock_report_df)
-        mock_check_transparency.return_value = (
-            stage_outputs[7],
-            mock_report_df,
-        )
-        mock_check_duplicates.return_value = (stage_outputs[8], mock_report_df)
+        mock_check_fx_margin.return_value = (MagicMock(), mock_report_df)
+        mock_check_transparency.return_value = (MagicMock(), mock_report_df)
+        mock_check_duplicates.return_value = (MagicMock(), mock_report_df)
 
         spark = MagicMock(name="SparkSession")
         raw_path = "s3://remittance-corridor-raw-data-bucket-011294328070/raw/full_history/rpw_q2_2016_2025.parquet"
 
         clean_df, reports = run_pipeline(spark, raw_path)
 
-        # Correct input threading: each stage receives the previous
-        # stage's output, not the raw df or some other stage's output.
+        # Correct input threading through the transform stages.
         mock_load_raw_parquet.assert_called_once_with(spark, raw_path)
         mock_clean_geography_nulls.assert_called_once_with(stage_outputs[0])
         mock_parse_date_column.assert_called_once_with(stage_outputs[1])
         mock_parse_period_column.assert_called_once_with(stage_outputs[2])
         mock_unpivot_cc.assert_called_once_with(stage_outputs[3])
         mock_validate_grain.assert_called_once_with(stage_outputs[4])
-        mock_check_fx_margin.assert_called_once_with(stage_outputs[5])
-        mock_check_transparency.assert_called_once_with(stage_outputs[6])
-        mock_check_duplicates.assert_called_once_with(stage_outputs[7])
 
-        # Final clean_df is the last stage's clean output.
-        assert clean_df is stage_outputs[8]
+        # The three quality checks all receive validate_grain's clean
+        # output directly -- not each other's output.
+        mock_check_fx_margin.assert_called_once_with(stage_outputs[5])
+        mock_check_transparency.assert_called_once_with(stage_outputs[5])
+        mock_check_duplicates.assert_called_once_with(stage_outputs[5])
+
+        # Final clean_df is validate_grain's output, untouched by the
+        # three flag-only checks.
+        assert clean_df is stage_outputs[5]
 
     @patch("src.pipeline.check_duplicates")
     @patch("src.pipeline.check_transparency")
