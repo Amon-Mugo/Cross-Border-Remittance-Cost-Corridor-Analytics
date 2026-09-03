@@ -23,3 +23,8 @@ rsa_key.p8
 rsa_key.pub
 terraform.tfvars
 src.zip
+
+# dbt
+dbt/logs/
+dbt/target/
+dbt/dbt_packages/

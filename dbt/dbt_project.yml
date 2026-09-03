@@ -1,0 +1,35 @@
+name: 'remittance_corridor'
+version: '1.0.0'
+config-version: 2
+
+profile: 'remittance_corridor'
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  remittance_corridor:
+    staging:
+      +materialized: view
+      +schema: staging
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+    marts:
+      +materialized: table
+      +schema: marts
+
+seeds:
+  remittance_corridor:
+    +schema: reference
+    seed_currency_reference:
+      +column_types:
+        currency_code: varchar(10)
+        currency_name: varchar(50)
