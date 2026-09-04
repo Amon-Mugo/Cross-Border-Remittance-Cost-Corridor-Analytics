@@ -1,0 +1,22 @@
+#used for declaring REMITTANCE_RAW as dbt source so 
+#stg_remittance_raw.sql can referrence it via source 
+version: 2
+
+sources:
+  - name: remittance_corridor
+    description: Raw landing schema populated by the LOAD_REMITTANCE_RAW procedure from EMR pipeline output.
+    database: REMITTANCE_CORRIDOR
+    schema: RAW
+    tables:
+      - name: remittance_raw
+        identifier: REMITTANCE_RAW
+        description: >
+          Cleaned, unpivoted, grain-deduplicated remittance corridor data
+          landed by the EMR pipeline. One row per corridor-firm-instrument-
+          period-send_amount combination
+        columns:
+          - name: id
+            description: Surrogate row identifier assigned by EMR pipeline
+            tests:
+              - unique
+              - not_null
