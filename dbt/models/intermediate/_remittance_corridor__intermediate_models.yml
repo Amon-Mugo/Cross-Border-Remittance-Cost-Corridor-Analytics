@@ -1,0 +1,39 @@
+# Tests for int_corridor_costs_enriched. Relationship tests confirm every
+# country/currency code produced by this model's joins actually resolves
+# against the reference seeds — a broken match here would otherwise
+# surface downstream as a silent null in a mart, much harder to trace.
+
+version: 2
+
+models:
+  - name: int_corridor_costs_enriched
+    description: >
+      stg_remittance_raw enriched with region/income (via corridor-derived
+      country codes) and currency reference data. Join-only — does not
+      change the staging grain (raw_id + cc_number).
+    columns:
+      - name: sending_country_code
+        description: Left 3 characters of corridor (ISO3, using World Bank's XKX convention for Kosovo).
+        tests:
+          - not_null
+          - relationships:
+              to: ref('seed_region_income_reference')
+              field: country_iso3
+
+      - name: receiving_country_code
+        description: Right 3 characters of corridor (ISO3, using World Bank's XKX convention for Kosovo).
+        tests:
+          - not_null
+          - relationships:
+              to: ref('seed_region_income_reference')
+              field: country_iso3
+
+      - name: lcu_code_resolved
+        description: >
+          Sending-side currency code, with CFA resolved to its real ISO
+          4217 code (XOF for West African CFA zone countries, XAF for
+          Central African CFA zone countries) based on sending country.
+        tests:
+          - relationships:
+              to: ref('seed_currency_reference')
+              field: currency_code

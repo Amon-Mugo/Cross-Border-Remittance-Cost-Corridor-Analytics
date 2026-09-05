@@ -25,13 +25,13 @@ renamed as (
 
         trim(source_code)                                   as source_code,
         trim(source_name)                                   as source_country_name,
-        trim(source_income)                                 as source_income_group,
+        trim(source_income)                                 as source_income_group_as_reported,
         trim("source_G8G20")                                as source_g8g20,
 
         trim(destination_code)                              as destination_code,
         trim(destination_name)                              as destination_country_name,
         trim(destination_region)                            as destination_region,
-        trim(destination_income)                             as destination_income_group,
+        trim(destination_income)                             as destination_income_group_as_reported,
         trim(destination_lending)                            as destination_lending_category,
 
         cast(date as date)                                as transaction_date,
