@@ -8,9 +8,10 @@ models:
     description: 1:1 typed staging model over REMITTANCE_RAW. No filtering or business logic applied.
     tests:
       - dbt_utils.unique_combination_of_columns:
-          combination_of_columns:
-            - raw_id
-            - cc_number
+          arguments:
+            combination_of_columns:
+              - raw_id
+              - cc_number
     columns:
       - name: raw_id
         description: >

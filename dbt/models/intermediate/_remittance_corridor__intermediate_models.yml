@@ -2,6 +2,11 @@
 # country/currency code produced by this model's joins actually resolves
 # against the reference seeds — a broken match here would otherwise
 # surface downstream as a silent null in a mart, much harder to trace.
+#
+# Tests for int_provider_cost_decomposed. not_null tests are warn-severity
+# on the three cost-component columns since ~700 rows out of ~314.8k
+# genuinely lack a usable lcu_amount/fx_margin in the source data — a
+# known real gap, not a modeling error.
 
 version: 2
 
@@ -37,3 +42,44 @@ models:
           - relationships:
               to: ref('seed_currency_reference')
               field: currency_code
+
+  - name: int_provider_cost_decomposed
+    description: >
+      int_corridor_costs_enriched decomposed into fee and FX margin cost
+      components. Does not change grain (raw_id + cc_number) and does not
+      reconcile against the reported total_cost_pct — that check belongs
+      to int_transparency_flagged.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+           combination_of_columns:
+            - raw_id
+            - cc_number
+    columns:
+      - name: fee_cost_pct
+        description: >
+          Transaction fee as a percentage of the amount received
+          (lcu_fee / lcu_amount * 100). Null wherever lcu_amount is
+          0 or null — a real data gap, not a divide-by-zero error.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: fx_margin_pct
+        description: >
+          FX margin as reported in the source data, renamed for clarity
+          alongside fee_cost_pct. No transformation applied.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: decomposed_cost_pct
+        description: >
+          fee_cost_pct + fx_margin_pct. Not reconciled here against the
+          reported total_cost_pct — see int_transparency_flagged.
+        tests:
+          - not_null:
+              config:
+                severity: warn
