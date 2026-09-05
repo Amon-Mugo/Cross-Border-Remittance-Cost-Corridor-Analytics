@@ -1,0 +1,57 @@
+
+# Tests for stg_remittance_raw.
+
+version: 2
+
+models:
+  - name: stg_remittance_raw
+    description: 1:1 typed staging model over REMITTANCE_RAW. No filtering or business logic applied.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - raw_id
+            - cc_number
+    columns:
+      - name: raw_id
+        description: >
+          Quote/corridor-observation identifier from the source system.
+          Not unique alone — shared across send-amount tiers (cc_number)
+          collected for the same observation. Composite grain is
+          raw_id + cc_number.
+        tests:
+          - not_null
+
+      - name: cc_number
+        description: Send-amount tier code (e.g. 1 = $200, 2 = $500 send amount).
+        tests:
+          - not_null
+
+      - name: corridor
+        tests:
+          - not_null
+
+      - name: firm
+        tests:
+          - not_null
+
+      - name: payment_instrument
+        tests:
+          - not_null
+
+      - name: period_year
+        tests:
+          - not_null
+
+      - name: period_quarter
+        tests:
+          - not_null
+
+      - name: send_amount
+        tests:
+          - not_null
+
+      - name: total_cost_pct
+        tests:
+          - not_null:
+              config:
+                severity: warn
