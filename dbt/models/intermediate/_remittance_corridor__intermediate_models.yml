@@ -83,3 +83,55 @@ models:
           - not_null:
               config:
                 severity: warn
+  - name: int_transparency_flagged
+    description: >
+      int_provider_cost_decomposed flagged for transparency/disclosure
+      completeness: self-reported transparency (case-normalized), missing
+      cost inputs, and a reported-vs-decomposed total cost mismatch
+      (0.01pp threshold, above the natural rounding noise floor). Does
+      not change grain (raw_id + cc_number).
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - raw_id
+              - cc_number
+    columns:
+      - name: is_disclosed_transparent
+        description: >
+          Normalized boolean from the raw transparent column (case- and
+          whitespace-insensitive). No nulls expected — confirmed the
+          source column has only 'Yes'/'yes'/'no' values.
+        tests:
+          - not_null
+
+      - name: total_cost_pct_missing
+        description: True when the reported total_cost_pct is null.
+        tests:
+          - not_null
+
+      - name: cost_components_missing
+        description: True when fee_cost_pct or fx_margin_pct is null.
+        tests:
+          - not_null
+
+      - name: cost_mismatch_flag
+        description: >
+          True when abs(decomposed_cost_pct - total_cost_pct) exceeds
+          0.01 percentage points. Null when either side is unevaluable
+          (missing cost components or missing reported total) — a known,
+          expected condition, not an error.
+        tests:
+          - not_null:
+              config:
+                severity: warn
+
+      - name: transparency_flag_count
+        description: >
+          Count of true flags among total_cost_pct_missing,
+          cost_components_missing, and cost_mismatch_flag (0-2 in
+          practice; a null cost_mismatch_flag does not count against it).
+        tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3]
