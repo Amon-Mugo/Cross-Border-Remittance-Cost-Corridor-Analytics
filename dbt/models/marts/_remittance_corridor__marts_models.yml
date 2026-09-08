@@ -1,0 +1,141 @@
+# Tests for the marts layer. Each mart is queried directly by downstream
+# consumers (dashboards, analysts), so tests here focus on grain integrity
+# and the invariants specific to each mart's aggregation/filter logic,
+# rather than re-testing upstream columns already covered in staging/
+# intermediate schema.yml files.
+
+version: 2
+
+models:
+  - name: mart_corridor_cost_trends
+    description: >
+      Corridor-level cost trend mart. Aggregates int_transparency_flagged
+      across providers to one row per corridor / period / send-amount
+      tier / disclosed-transparency status.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - corridor
+              - period_year
+              - period_quarter
+              - cc_number
+              - is_disclosed_transparent
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "num_providers <= num_observations"
+    columns:
+      - name: num_observations
+        tests:
+          - not_null
+      - name: num_providers
+        tests:
+          - not_null
+      - name: num_cost_mismatch_flagged
+        tests:
+          - not_null
+
+  - name: mart_provider_comparison
+    description: >
+      Provider comparison mart at full channel grain (firm, firm type,
+      corridor, period, send-amount tier, payment instrument, pickup
+      method) — pure passthrough, no aggregation.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - firm
+              - firm_type
+              - corridor
+              - period_year
+              - period_quarter
+              - cc_number
+              - payment_instrument
+              - pickup_method
+    columns:
+      - name: firm
+        tests:
+          - not_null
+      - name: corridor
+        tests:
+          - not_null
+      - name: period_year
+        tests:
+          - not_null
+      - name: period_quarter
+        tests:
+          - not_null
+
+  - name: mart_transparency_flags
+    description: >
+      Firm-level transparency scorecard. Aggregates int_transparency_flagged
+      across all of a provider's corridors/periods/channels into one row
+      per firm.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - firm
+              - firm_type
+      - dbt_utils.expression_is_true:
+          arguments:
+            expression: "num_cost_mismatch_evaluable <= num_observations"
+    columns:
+      - name: num_observations
+        tests:
+          - not_null
+      - name: num_corridors
+        tests:
+          - not_null
+      - name: num_periods
+        tests:
+          - not_null
+      - name: pct_disclosed_transparent
+        tests:
+          - not_null
+      - name: pct_total_cost_pct_missing
+        tests:
+          - not_null
+      - name: pct_cost_components_missing
+        tests:
+          - not_null
+      - name: num_cost_mismatch_flagged
+        tests:
+          - not_null
+      - name: num_cost_mismatch_evaluable
+        tests:
+          - not_null
+      - name: has_sufficient_sample
+        tests:
+          - not_null
+
+  - name: mart_kenya_corridors
+    description: >
+      Kenya spotlight mart. Same grain as mart_provider_comparison,
+      filtered to corridors where Kenya is the sending or receiving
+      country, with kenya_role distinguishing which.
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns:
+              - firm
+              - firm_type
+              - corridor
+              - period_year
+              - period_quarter
+              - cc_number
+              - payment_instrument
+              - pickup_method
+    columns:
+      - name: firm
+        tests:
+          - not_null
+      - name: corridor
+        tests:
+          - not_null
+      - name: kenya_role
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['sending', 'receiving']
