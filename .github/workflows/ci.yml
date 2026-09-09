@@ -105,3 +105,61 @@ jobs:
           TF_VAR_terraform_locks_table_name: ${{ secrets.TF_VAR_TERRAFORM_LOCKS_TABLE_NAME }}
           TF_VAR_snowflake_iam_user_arn: ${{ secrets.TF_VAR_SNOWFLAKE_IAM_USER_ARN }}
           TF_VAR_snowflake_external_id: ${{ secrets.TF_VAR_SNOWFLAKE_EXTERNAL_ID }}
+
+  dbt-build-test:
+    name: dbt Build and Test (CI schema)
+    runs-on: ubuntu-latest
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
+      DBT_SNOWFLAKE_PRIVATE_KEY_PATH: ${{ github.workspace }}/.dbt/rsa_key_ci.p8
+      DBT_SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+           python-version: ${{ env.PYTHON_VERSION }}
+           cache: 'pip'
+      - name: Install dbt
+        run: |
+          pip install --upgrade pip
+          pip install dbt-core==1.12.3 dbt-snowflake==1.12.0
+      - name: Write Snowflake CI private key
+        run: |
+          mkdir -p "${{ env.DBT_PROFILES_DIR }}"
+          cat > "${{ env.DBT_SNOWFLAKE_PRIVATE_KEY_PATH }}" << 'EOF'
+          ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY }}
+          EOF
+          chmod 600 "${{ env.DBT_SNOWFLAKE_PRIVATE_KEY_PATH }}"
+      
+      - name: Write dbt profiles.yml (ci  target only )
+        run: |
+          cat >"${{ env.DBT_PROFILES_DIR }}/profiles.yml" <<'EOF'
+          remittance_corridor:
+            target: ci
+            outputs:
+              ci:
+                type: snowflake
+                account: ${{ secrets.SNOWFLAKE_CI_ACCOUNT }}
+                user: REMITTANCE_CI_USER
+                authenticator: snowflake_jwt
+                private_key_path: "${{ env.DBT_SNOWFLAKE_PRIVATE_KEY_PATH }}"
+                private_key_passphrase: "${{ env.DBT_SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}"
+                role: ${{ secrets.SNOWFLAKE_CI_ROLE }}
+                database: ${{ secrets.SNOWFLAKE_CI_DATABASE }}
+                warehouse: ${{ secrets.SNOWFLAKE_CI_WAREHOUSE }}
+                schema: CI
+                threads: 4
+                client_session_keep_alive: false
+          EOF
+      - name: dbt deps
+        working-directory: dbt
+        run: dbt deps
+      - name: dbt build (CI schema)
+        working-directory: dbt
+        run: dbt build --target ci
+          
+      
+       
+  

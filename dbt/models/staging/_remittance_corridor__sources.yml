@@ -1,7 +1,6 @@
 #used for declaring REMITTANCE_RAW as dbt source so 
 #stg_remittance_raw.sql can referrence it via source 
 version: 2
-
 sources:
   - name: remittance_corridor
     description: Raw landing schema populated by the LOAD_REMITTANCE_RAW procedure from EMR pipeline output.
