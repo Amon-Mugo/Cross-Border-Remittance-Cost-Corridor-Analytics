@@ -112,7 +112,6 @@ jobs:
     env:
       DBT_PROFILES_DIR: ${{ github.workspace }}/.dbt
       DBT_SNOWFLAKE_PRIVATE_KEY_PATH: ${{ github.workspace }}/.dbt/rsa_key_ci.p8
-      DBT_SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -145,7 +144,6 @@ jobs:
                 user: REMITTANCE_CI_USER
                 authenticator: snowflake_jwt
                 private_key_path: "${{ env.DBT_SNOWFLAKE_PRIVATE_KEY_PATH }}"
-                private_key_passphrase: "${{ env.DBT_SNOWFLAKE_PRIVATE_KEY_PASSPHRASE }}"
                 role: ${{ secrets.SNOWFLAKE_CI_ROLE }}
                 database: ${{ secrets.SNOWFLAKE_CI_DATABASE }}
                 warehouse: ${{ secrets.SNOWFLAKE_CI_WAREHOUSE }}
