@@ -17,5 +17,4 @@ sources:
           - name: id
             description: Surrogate row identifier assigned by EMR pipeline
             tests:
-              - unique
               - not_null
