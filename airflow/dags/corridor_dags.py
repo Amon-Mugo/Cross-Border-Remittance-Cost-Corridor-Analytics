@@ -20,8 +20,7 @@ AWS_CONN_ID = "aws_default"
 SNOWFLAKE_CONN_ID="snowflake_default"
 
 LOCAL_XLSX_PATH= (
-    "/home/amonmugo/PROJECTS/Cross-Border Remittance Cost & Corridor Analytics"
-    "/data/drops/rpw_latest.xlsx"
+     "/opt/airflow/data/drops/rpw_latest.xlsx"
 ) # this is the path of the raw input of the local file system
 
 RAW_BUCKET= "remittance-corridor-raw-data-bucket-011294328070"
@@ -90,7 +89,7 @@ with DAG(
         conn_id=SNOWFLAKE_CONN_ID,
         sql=["CALL LOAD_REMITTANCE_RAW('{{ ti.xcom_pull(task_ids=\"ingestion\") }}');"],
         hook_params={
-            "role": "REMITTANCE_CORRIDOR_ROLE",
+            "role": "REMITTANCE_LOADER_ROLE",
             "database": "REMITTANCE_CORRIDOR",
             "warehouse": "REMITTANCE_CORRIDOR_WH",
             "schema": "RAW",
