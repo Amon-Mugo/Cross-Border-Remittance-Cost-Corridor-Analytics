@@ -26,6 +26,8 @@ DECLARE
     delete_sql  STRING;
     copy_sql    STRING;
 BEGIN
+    BEGIN TRANSACTION;
+
     -- 1. Construct and execute DELETE query for explicit idempotency
     delete_sql := 'DELETE FROM REMITTANCE_RAW WHERE PERIOD = ''' || :QUARTER_LABEL || '''';
     EXECUTE IMMEDIATE :delete_sql;
@@ -38,12 +40,16 @@ BEGIN
     EXECUTE IMMEDIATE :copy_sql;
     -- 3. Capture post-load cumulative table row count
     SELECT COUNT(*) INTO :loaded_rows FROM REMITTANCE_RAW;
+
+    COMMIT;
+
     -- 4. Record successful execution receipt in audit history
     INSERT INTO REMITTANCE_LOAD_HISTORY (quarter_label, row_count, status)
     VALUES (:QUARTER_LABEL, :loaded_rows, 'SUCCESS');
     RETURN 'Loaded quarter ' || :QUARTER_LABEL || '. Table now has ' || :loaded_rows || ' total rows.';
 EXCEPTION
     WHEN OTHER THEN
+        ROLLBACK;
         INSERT INTO REMITTANCE_LOAD_HISTORY (quarter_label, row_count, status, error_message)
         VALUES (:QUARTER_LABEL, 0, 'FAILED', :SQLERRM);
         RAISE;

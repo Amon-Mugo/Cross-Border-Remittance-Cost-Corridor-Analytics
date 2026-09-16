@@ -14,8 +14,8 @@ from src.transform.unpivot_cc import unpivot_cc
 from src.transform.validate_grain import validate_grain
 
 logger = logging.getLogger(__name__)
-RAW_BUCKET = "remittance-corridor-raw-data-bucket-<redacted>"
-CURATED_BUCKET = "remittance-corridor-curated-data-bucket-<redacted>"
+RAW_BUCKET = "remittance-corridor-raw-data-bucket-011294328070"
+CURATED_BUCKET = "remittance-corridor-curated-data-bucket-011294328070"
 DEFAULT_RAW_PATH = f"s3://{RAW_BUCKET}/raw/full_history/rpw_q2_2016_2025.parquet"
 DEFAULT_OUTPUT_PATH = f"s3://{CURATED_BUCKET}"
 
@@ -105,6 +105,14 @@ def parse_args() -> argparse.Namespace:
         help="S3 path to the curated bucket to write clean output and "
         "quality reports under.",
     )
+    # registering the quarter to scope this run to (latest-quarter-only DAG)
+    parser.add_argument(
+        "--quarter-label",
+        default=None,
+        help="Process only this quarter's raw Parquet (e.g. 2025_1Q) "
+        "under raw_bucket/raw/<quarter_label>/data.parquet, instead of "
+        "the full-history --raw-path.",
+    )
 
     return parser.parse_args()
 
@@ -118,6 +126,14 @@ def main() -> None:
     # cli args
     args = parse_args()  # cli to be displayed in the terminal
 
+    # a quarter label scopes this run to just that quarter's raw file
+    # (written by convert_xlsx_to_parquet), overriding --raw-path
+    raw_path = (
+        f"s3://{RAW_BUCKET}/raw/{args.quarter_label}/data.parquet"
+        if args.quarter_label
+        else args.raw_path
+    )
+
     # init spark session
     spark = SparkSession.builder.appName(
         "cross-border-remittance-corridor-pipeline"
@@ -126,9 +142,8 @@ def main() -> None:
     # run the pipeline
     try:
         clean_df, reports = run_pipeline(
-            spark, args.raw_path
+            spark, raw_path
         )  # based on our first function run_pipeline
-        write_outputs(clean_df, reports, args.output_path)
     finally:
         spark.stop()
 

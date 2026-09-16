@@ -1,6 +1,5 @@
 # used to define our dags and also the error handling
 
-from airflow.models import Variable
 from datetime import  datetime,timedelta
 from airflow.providers.standard.operators.python import PythonOperator
 from airflow.providers.amazon.aws.operators.emr import EmrServerlessStartJobOperator
@@ -43,7 +42,7 @@ with DAG(
     description="ingestion -> EMR transform -> Snowflake load, latest quarter only",
     default_args=DEFAULT_ARGS,
     schedule=None,
-    start_date=datetime(2026, 10, 7),
+    start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=["remittance"],
 ) as dag:
@@ -62,11 +61,14 @@ with DAG(
             "sparkSubmit": {
                 "entryPoint": ENTRY_POINT_S3_PATH,
                 "entryPointArguments": [
+                    "--quarter-label",
                     "{{ ti.xcom_pull(task_ids='ingestion') }}",
                 ],
                 "sparkSubmitParameters": (
                     f"--py-files {SRC_PACKAGE_S3_PATH} "
                     "--conf spark.dynamicAllocation.enabled=false "
+                    "--conf spark.driver.cores=1 "
+                    "--conf spark.driver.memory=2g "
                     "--conf spark.executor.instances=2 "
                     "--conf spark.executor.cores=1 "
                     "--conf spark.executor.memory=2g"
@@ -88,6 +90,7 @@ with DAG(
         task_id="load_raw_snowflake",
         conn_id=SNOWFLAKE_CONN_ID,
         sql=["CALL LOAD_REMITTANCE_RAW('{{ ti.xcom_pull(task_ids=\"ingestion\") }}');"],
+        autocommit= True,
         hook_params={
             "role": "REMITTANCE_LOADER_ROLE",
             "database": "REMITTANCE_CORRIDOR",

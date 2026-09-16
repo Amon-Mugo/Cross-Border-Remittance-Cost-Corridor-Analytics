@@ -16,6 +16,7 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "true"
     AIRFLOW__CORE__AUTH_MANAGER: airflow.api_fastapi.auth.managers.simple.simple_auth_manager.SimpleAuthManager
     AIRFLOW__API__PORT: "8081"
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: "http://localhost:8081/execution/"
     AWS_PROFILE: data-corp-admin
   volumes:
     - ./airflow/dags:/opt/airflow/dags
