@@ -1,6 +1,7 @@
 -- Step 1: create prod schemas and a dedicated prod role, scoped only to them.
 -- Mirrors the DEV_*/REMITTANCE_DBT_ROLE pattern but kept separate for
 -- least-privilege isolation between CI/dev and the real prod dbt job.
+-- also run this in snowflake 
 
 CREATE SCHEMA IF NOT EXISTS REMITTANCE_CORRIDOR.PROD_STAGING;
 CREATE SCHEMA IF NOT EXISTS REMITTANCE_CORRIDOR.PROD_INTERMEDIATE;
