@@ -76,6 +76,14 @@ resource "aws_ecr_repository_policy" "remittance_corridor_ecr" {
           "ecr:BatchCheckLayerAvailability",
           "ecr:DescribeImages",
         ]
+        Condition = {
+          StringEquals = {
+            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:emr-serverless:${var.aws_region}:${data.aws_caller_identity.current.account_id}:/applications/${var.emr_application_id}"
+          }
+        }
       }
     ]
   })

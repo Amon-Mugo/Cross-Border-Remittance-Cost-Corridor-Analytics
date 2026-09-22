@@ -30,3 +30,4 @@ dbt/target/
 dbt/dbt_packages/
 .env
 airflow/logs/
+dbt/.ci-profiles

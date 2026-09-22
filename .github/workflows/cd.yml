@@ -1,0 +1,202 @@
+name: CD
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: cd-production
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  TF_IN_AUTOMATION: "true"
+
+jobs:
+  terraform-apply:
+    name: Terraform apply
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    environment: production
+    defaults:
+      run:
+        working-directory: terraform
+    env:
+      TF_VAR_emr_application_id: ${{ vars.EMR_APPLICATION_ID }}
+    steps:
+      - name: Check out the commit that passed CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+      - name: Configure AWS credential via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.CD_ROLE_ARN }}
+          aws_region: ${{ env.AWS_REGION }}
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      
+      - name: Terraform init
+        run: terraform init -input=false
+
+      - name: Terraform plan
+        run: terraform plan -input=false -out=tfplan
+
+      - name: Terraform apply
+        run: terraform apply -input=false -auto-approve tfplan
+      
+
+
+  ecr-push-emr-update:
+    name: Push image and update EMR Serverless
+    needs: terraform-apply
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY }}
+      EMR_APPLICATION_ID: ${{ vars.EMR_APPLICATION_ID }}
+      HEAD_SHA: ${{ github.event.workflow_run.head_sha }}
+    steps:
+      - name: Check out the commit that passed CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.CD_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Derive image tag and URI
+        id: image
+        run: |
+          tag="${HEAD_SHA:0:12}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "uri=${{ steps.ecr.outputs.registry }}/${ECR_REPOSITORY}:${tag}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.image.outputs.uri }}
+          provenance: false
+          sbom: false
+
+      - name: Stop EMR Serverless application
+        run: |
+          state=$(aws emr-serverless get-application \
+            --application-id "$EMR_APPLICATION_ID" \
+            --query 'application.state' --output text)
+          if [ "$state" != "STOPPED" ]; then
+            aws emr-serverless stop-application --application-id "$EMR_APPLICATION_ID"
+          fi
+          for attempt in $(seq 1 30); do
+            state=$(aws emr-serverless get-application \
+              --application-id "$EMR_APPLICATION_ID" \
+              --query 'application.state' --output text)
+            if [ "$state" = "STOPPED" ]; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Application did not reach STOPPED (last state: ${state})" >&2
+          exit 1
+
+      - name: Update EMR Serverless application image
+        env:
+          IMAGE_URI: ${{ steps.image.outputs.uri }}
+        run: |
+          aws emr-serverless update-application \
+            --application-id "$EMR_APPLICATION_ID" \
+            --image-configuration "imageUri=${IMAGE_URI}"
+
+      - name: Verify deployed image URI
+        env:
+          IMAGE_URI: ${{ steps.image.outputs.uri }}
+        run: |
+          deployed=$(aws emr-serverless get-application \
+            --application-id "$EMR_APPLICATION_ID" \
+            --query 'application.imageConfiguration.imageUri' --output text)
+          test "$deployed" = "$IMAGE_URI"
+
+  dbt-prod:
+    name: dbt build (prod)
+    needs: ecr-push-emr-update
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dbt
+    env:
+      DBT_PROFILES_DIR: ${{ github.workspace }}/dbt/.ci-profiles
+      SNOWFLAKE_PROD_ACCOUNT: ${{ secrets.SNOWFLAKE_PROD_ACCOUNT }}
+      SNOWFLAKE_PROD_USER: ${{ secrets.SNOWFLAKE_PROD_USER }}
+      SNOWFLAKE_PROD_ROLE: ${{ secrets.SNOWFLAKE_PROD_ROLE }}
+      SNOWFLAKE_PROD_DATABASE: ${{ secrets.SNOWFLAKE_PROD_DATABASE }}
+      SNOWFLAKE_PROD_WAREHOUSE: ${{ secrets.SNOWFLAKE_PROD_WAREHOUSE }}
+      SNOWFLAKE_PROD_PRIVATE_KEY: ${{ secrets.SNOWFLAKE_PROD_PRIVATE_KEY }}
+    steps:
+      - name: Check out the commit that passed CI
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dbt
+        run: pip install "dbt-core==1.12.3" "dbt-snowflake==1.12.0"
+
+      - name: Write prod key and profiles.yml
+        run: |
+          mkdir -p "$DBT_PROFILES_DIR"
+          key_path="$RUNNER_TEMP/rsa_key_prod.p8"
+          printf '%s\n' "$SNOWFLAKE_PROD_PRIVATE_KEY" > "$key_path"
+          chmod 600 "$key_path"
+          cat > "$DBT_PROFILES_DIR/profiles.yml" << PROFILES
+          remittance_corridor:
+            target: prod
+            outputs:
+              prod:
+                type: snowflake
+                account: ${SNOWFLAKE_PROD_ACCOUNT}
+                user: ${SNOWFLAKE_PROD_USER}
+                role: ${SNOWFLAKE_PROD_ROLE}
+                database: ${SNOWFLAKE_PROD_DATABASE}
+                warehouse: ${SNOWFLAKE_PROD_WAREHOUSE}
+                schema: PROD
+                authenticator: snowflake_jwt
+                private_key_path: ${key_path}
+                threads: 4
+          PROFILES
+
+      - name: Install dbt packages
+        run: dbt deps
+
+      - name: dbt build (prod)
+        run: dbt build --target prod
+
+      - name: Remove key material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/rsa_key_prod.p8"

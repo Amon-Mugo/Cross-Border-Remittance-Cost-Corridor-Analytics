@@ -26,6 +26,12 @@ resource "aws_emrserverless_application" "remittance_corridor_emr" {
 
   depends_on = [aws_ecr_repository_policy.remittance_corridor_ecr] # because of the ECR repository policy
 
+  # The CD workflow's ecr-push-emr-update job is the only thing that moves the
+  # image pointer after creation; Terraform must not revert it on apply.
+  lifecycle {
+    ignore_changes = [image_configuration]
+  }
+
   tags = {
     Project   = var.project_name
     Purpose   = "EMR Serverless Application"
