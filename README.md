@@ -6,6 +6,10 @@ An end-to-end, cloud-native data engineering platform designed to ingest, proces
 
 ---
 
+## Live dashboard deployment for analytics of the pipeline
+https://amon-mugo-cross-border-remittance-cost-corr-dashboardapp-hmpwt3.streamlit.app/
+
+
 ## Executive Summary & Key Insights
 
 Remittances are a critical source of financial support for millions of households globally, yet pricing structures across financial institutions, money transfer operators (MTOs), and digital wallets remain opaque and fragmented.
