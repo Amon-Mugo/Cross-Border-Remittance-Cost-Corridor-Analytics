@@ -100,25 +100,32 @@ World Bank RPW (.xlsx Quarterly Release)
 
 ---
 
-## Analytics Dashboard
+## Dashboard
 
-The interactive UI is built with **Streamlit** and **Plotly**, powered by a embedded **DuckDB** snapshot of the `dbt` analytics marts for high-performance offline querying.
+Built with Streamlit and Plotly, backed by a self-contained DuckDB snapshot of the four dbt marts (not live Snowflake queries, to keep the deployed app dependency-light and fast).
 
-### Global Market Dynamics
+### Global view
 
-Tracks cross-regional transfer trends, pricing distributions, and provider transparency compliance across 350+ corridors.
+Multi-corridor cost trend comparison and a provider transparency scorecard across the full dataset.
 
-| Multi-Corridor Cost Trends | Global Corridor Breakdown |
-| --- | --- |
-|  |  |
+![Global cost trends](global_screanshots/global-cost-trends.png)
+![Global corridor detail](global_screanshots/global-corridor-detail.png)
 
-### Kenya Corridor Spotlight
+### Kenya spotlight
 
-Analyzes inbound/outbound fee structures, average transfer costs by firm type, and provider market share in East Africa.
+Sending vs. receiving role toggle, cost trends, and firm-level comparison for Kenya's corridors.
 
-| Corridor Directionality | Cost Structure Decomposition | Average Cost by Firm |
-| --- | --- | --- |
-|  |  |  |
+![Kenya sending and receiving corridors](screenshots_kenya/kenya-sending-receiving.png)
+![Kenya cost breakdown](screenshots_kenya/kenya-cost-breakdown.png)
+![Average cost by firm in Kenya](screenshots_kenya/kenya-avg-cost-by-firm.png)
+
+---
+
+## Key findings
+
+- **Bank vs. MTO/mobile pricing gap:** in Kenya's inbound corridors, bank-published rates (major commercial banks) run 3-5x higher than mobile money and MTO rates for equivalent transfers.
+- **Kenya's remittance profile:** a strong receiving market with heavy inbound competition — 6 corridors and 64 firms on the receiving side, versus 4 corridors and 21 firms sending, consistent with Kenya's real-world position.
+- **Pricing transparency:** the large majority of observations (roughly 98 percent) are fully disclosed and internally consistent; a small but real minority (under 2 percent) show missing cost components or a mismatch between reported and decomposed total cost.
 
 ---
 
