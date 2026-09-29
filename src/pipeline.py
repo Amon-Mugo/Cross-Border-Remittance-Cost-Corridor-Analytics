@@ -144,7 +144,7 @@ def main() -> None:
         clean_df, reports = run_pipeline(
             spark, raw_path
         )  # based on our first function run_pipeline
-        write_outputs(clean_df,reports,args.output_path) 
+        write_outputs(clean_df, reports, args.output_path)
     finally:
         spark.stop()
 
