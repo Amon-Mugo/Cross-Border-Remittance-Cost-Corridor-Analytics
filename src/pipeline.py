@@ -144,6 +144,7 @@ def main() -> None:
         clean_df, reports = run_pipeline(
             spark, raw_path
         )  # based on our first function run_pipeline
+        write_outputs(clean_df,reports,args.output_path) #writes the pyspark to s3 in order to be saved not leave fully in memory
     finally:
         spark.stop()
 
